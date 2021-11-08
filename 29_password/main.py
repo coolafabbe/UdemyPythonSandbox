@@ -2,23 +2,15 @@ from tkinter import *
 from tkinter import messagebox
 from random import randint, choice, shuffle
 import pyperclip
+import json
 
+from passwordgenerator.main import Password
 
 FONT_NAME = "Courier"
-LETTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-SYMBOLS = ['!', '#', '$', '%', '&', '(', ')', '*', '+']
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def password_generator():
-    password_letters = [choice(LETTERS) for _ in range(randint(8, 10))]
-    password_symbols = [choice(SYMBOLS) for _ in range(randint(2, 4))]
-    password_numbers = [choice(NUMBERS) for _ in range(randint(2, 4))]
-
-    password_list = password_letters + password_symbols + password_numbers
-    shuffle(password_list)
-
-    password = "".join(password_list)
+    password = Password().create_password()
     
     input_password.delete(0,'end')
     input_password.insert('end', password)
@@ -38,6 +30,9 @@ def save():
     is_ok = messagebox.askokcancel(title=website, message=f"These are the data:\n  user: {user}\n  password:{password}\nIs it ok to save?")
 
     if is_ok:
+        # with open("./data.json", mode="r") as file:
+        #     orginial_data = json.load(file)
+        #     print(orginial_data)
         with open("./data.txt", mode="a") as file:
             file.writelines(f"{website}\t{user}\t{password}\n")
         
