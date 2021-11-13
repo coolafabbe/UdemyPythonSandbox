@@ -1,6 +1,8 @@
 from sys import argv
 from tkinter import *
 from tkinter import messagebox
+from functools import partial
+from cryptography.fernet import InvalidToken
 import pyperclip
 import json
 
@@ -8,8 +10,56 @@ from passwordgenerator.main import PasswordGeneration
 from encryption import PasswordEncryption
 
 FONT_NAME = "Courier"
+SALT = b'SALT'
+
+encryption = None
+# ------------------------- UI SETUP LOGIN ---------------------------- #
+
+def validate_login(file_name, password):
+    try:
+        with open(file_name.get(), mode="r") as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        messagebox.showwarning(title="Oops", message=f"Data file not found!")
+    else:
+        global encryption 
+        
+        encryption = PasswordEncryption(password.get().encode(), SALT)
+        try:
+            first_password = next(iter(data.values()))["password"]
+            print(next(iter(data.values()))["password"])
+            decrypted = encryption.decrypt(first_password.encode())
+            print(decrypted)
+        except InvalidToken as e:  
+            print("Invalid password")
+        else:
+            login_window.destroy()
+            #main_window()    
+
+#window
+login_window = Tk()  
+login_window.geometry('200x75')  
+login_window.title('Password manager login')
+
+#username label and text entry box
+data_file_label = Label(login_window, text="Data filename").grid(row=0, column=0)
+data_file = StringVar()
+data_file_entry = Entry(login_window, textvariable=data_file).grid(row=0, column=1)  
+
+#password label and password entry box
+password_label = Label(login_window,text="Password").grid(row=1, column=0)  
+password = StringVar()
+password_entry = Entry(login_window, textvariable=password, show='*').grid(row=1, column=1)  
+
+validate_login = partial(validate_login, data_file, password)
+
+#login button
+login_button = Button(login_window, text="Login", command=validate_login).grid(row=4, column=0)  
+
+login_window.mainloop()
 
 
+# ---------------------------- UI SETUP ------------------------------- #
 def clear_input_fields(prefill_user=False):
     input_website.delete(0,'end') 
     input_user.delete(0,'end') 
@@ -82,14 +132,6 @@ def search():
         messagebox.showwarning(title="Oops", message=f"Entry ({website}) not found!")
         clear_input_fields()
 
-
-# ------------------------ Encryption SETUP --------------------------- #
-key = "1234".encode()
-salt = 'SALT'.encode()
-encryption = PasswordEncryption(key, salt)
-#print(encryption._key)
-
-# ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
 window.title("Password manager")
 window.config(padx=20, pady=20)
@@ -139,4 +181,5 @@ button_clear.config(width=15)
 button_clear.grid(row=4, column = 3, columnspan = 1)
 
 window.mainloop()
+
 print("good bye!")
