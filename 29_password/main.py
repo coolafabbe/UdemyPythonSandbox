@@ -1,16 +1,26 @@
+from sys import argv
 from tkinter import *
 from tkinter import messagebox
-from random import randint, choice, shuffle
 import pyperclip
 import json
 
-from passwordgenerator.main import Password
+from passwordgenerator.main import PasswordGeneration
+from encryption import PasswordEncryption
 
 FONT_NAME = "Courier"
 
+
+def clear_input_fields(prefill_user=False):
+    input_website.delete(0,'end') 
+    input_user.delete(0,'end') 
+    input_password.delete(0,'end')
+
+    if prefill_user:
+        input_user.insert('end', "fabian.fasth@gmail.com")
+
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def password_generator():
-    password = Password().create_password()
+    password = PasswordGeneration().create_password()
     
     input_password.delete(0,'end')
     input_password.insert('end', password)
@@ -22,26 +32,62 @@ def save():
     website = input_website.get()
     user = input_user.get()
     password = input_password.get()
+    encrypted_password = encryption.encrypt(input_password.get()).decode()
 
     if len(website) == 0 or len(user) == 0 or len(password) == 0:
         messagebox.showwarning(title="Oops", message="Please don't leave any fields empty!")
         return
 
-    is_ok = messagebox.askokcancel(title=website, message=f"These are the data:\n  user: {user}\n  password:{password}\nIs it ok to save?")
+    new_data = { website : {"user" : user, "password": encrypted_password}}
+    print(new_data)
+    try:
+        with open("./data.json", mode="r") as file:
+            data = json.load(file)
+            print(data)
+    except FileNotFoundError:
+        with open("./data.json", mode="w") as file:
+            json.dump(new_data, file, indent=2)
+    else:
+        with open("./data.json", mode="w") as file:
+            data.update(new_data)
+            json.dump(data, file, indent=2)
+    
+    clear_input_fields(True)
 
-    if is_ok:
-        # with open("./data.json", mode="r") as file:
-        #     orginial_data = json.load(file)
-        #     print(orginial_data)
-        with open("./data.txt", mode="a") as file:
-            file.writelines(f"{website}\t{user}\t{password}\n")
-        
-        input_website.delete(0,'end') 
-        input_user.delete(0,'end') 
-        input_password.delete(0,'end')
+def search():
+    website = input_website.get()
 
-        input_user.insert('end', "fabian.fasth@gmail.com")
+    if len(website) == 0:
+        messagebox.showwarning(title="Oops", message="Please don't leave website field empty!")
+        return
 
+    try:
+        with open("./data.json", mode="r") as file:
+            data = json.load(file)
+
+        user = data[website]["user"]
+        encrypted = data[website]["password"]
+        decrypted = encryption.decrypt(encrypted.encode()).decode()
+
+        clear_input_fields(False)
+        input_website.insert('end', website)
+        input_user.insert('end', user)
+        input_password.insert('end', decrypted)
+
+        pyperclip.copy(decrypted)
+    except FileNotFoundError:
+        messagebox.showwarning(title="Oops", message="Database not found!")
+        clear_input_fields()
+    except KeyError:
+        messagebox.showwarning(title="Oops", message=f"Entry ({website}) not found!")
+        clear_input_fields()
+
+
+# ------------------------ Encryption SETUP --------------------------- #
+key = "1234".encode()
+salt = 'SALT'.encode()
+encryption = PasswordEncryption(key, salt)
+#print(encryption._key)
 
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
@@ -74,15 +120,23 @@ input_user.insert(END, "fabian.fasth@gmail.com")
 input_user.grid(row=2, column=1, columnspan=2)
 
 input_password = Entry()
-input_password.config(width=21)
-input_password.grid(row=3, column=1)
+input_password.config(width=35)
+input_password.grid(row=3, column=1, columnspan=2)
 
 button_generate = Button(text="Generate", command=password_generator)
-button_generate.grid(row=3, column= 2)
+button_generate.grid(row=3, column= 3)
 
 button_add = Button(text="Add", command=save)
-button_add.config(width=35)
-button_add.grid(row=4, column = 1, columnspan = 2)
+button_add.config(width=15)
+button_add.grid(row=4, column = 1, columnspan = 1)
 
+button_search = Button(text="Search", command=search)
+button_search.config(width=15)
+button_search.grid(row=4, column = 2, columnspan = 1)
+
+button_clear = Button(text="Clear", command=clear_input_fields)
+button_clear.config(width=15)
+button_clear.grid(row=4, column = 3, columnspan = 1)
 
 window.mainloop()
+print("good bye!")
